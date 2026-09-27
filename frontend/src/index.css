@@ -1,0 +1,119 @@
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  /* رنگ‌ها */
+  --brown-900: #1d100a;
+  --brown-800: #24140d;
+  --brown-700: #2d190f;
+  --brown-600: #3a2114;
+  --brown-500: #5c3a20;
+  --brown-400: #8b5e2b;
+  --brown-300: #a87938;
+
+  --gold-500: #d9a441;
+  --gold-400: #e8b84d;
+  --gold-300: #efc566;
+  --gold-200: #f5d58a;
+
+  --cream: #f8f5f2;
+  --cream-2: #fffdfb;
+  --text-dark: #24140d;
+  --text-muted: #6f625b;
+  --border-soft: #eadfd6;
+
+  --gradient-gold: linear-gradient(135deg, var(--gold-500) 0%, var(--gold-300) 100%);
+  --gradient-dark: linear-gradient(135deg, var(--brown-800) 0%, var(--brown-600) 55%, var(--brown-900) 100%);
+
+  --shadow-soft: 0 10px 35px rgba(36, 20, 13, 0.08);
+  --shadow-strong: 0 20px 50px rgba(36, 20, 13, 0.18);
+  --shadow-gold: 0 12px 30px rgba(217, 164, 65, 0.35);
+
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 10px;
+
+  font-family: "Vazirmatn", Tahoma, Arial, sans-serif;
+  color: var(--text-dark);
+  background: var(--cream);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+html {
+  direction: rtl;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--cream);
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--gold-400);
+  color: var(--brown-900);
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold-500);
+  outline-offset: 2px;
+}
+
+/* اسکرول‌بار */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--brown-300);
+  border-radius: 10px;
+  border: 2px solid var(--cream);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brown-400);
+}
+
+/* انیمیشن‌های عمومی */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.75); }
+}
+
+@keyframes shine {
+  0% { transform: translateX(-120%) skewX(-15deg); }
+  100% { transform: translateX(220%) skewX(-15deg); }
+}
+
+.fade-up {
+  animation: fadeInUp 0.7s ease both;
+}
