@@ -8,7 +8,7 @@ function Services() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/services/")
+    fetch("https://mehrcoffenet.onrender.com/api/services/")
       .then((response) => {
         if (!response.ok) {
           throw new Error("خطا در دریافت خدمات");
