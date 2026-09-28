@@ -21,9 +21,8 @@ function Track() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/api/orders/track/${trackingCode.trim()}/`
-      );
-
+      `https://mehrcoffenet.onrender.com/api/orders/track/${trackingCode.trim()}/`
+        );
       const data = await response.json();
 
       if (!response.ok) {
