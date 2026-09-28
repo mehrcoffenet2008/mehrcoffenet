@@ -112,12 +112,10 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # =========================================================
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
-if DATABASE_URL:
+if os.environ.get("RENDER"):
     DATABASES = {
         "default": dj_database_url.parse(
-            DATABASE_URL,
+            os.environ.get("DATABASE_URL"),
             conn_max_age=600,
         )
     }
