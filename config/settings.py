@@ -185,6 +185,7 @@ FRONTEND_URL = os.environ.get(
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://mehrcoffenet2009.onrender.com"
 ]
 
 if FRONTEND_URL not in CORS_ALLOWED_ORIGINS:
