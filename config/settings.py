@@ -228,3 +228,5 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # =========================================================
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+CSRF_TRUSTED_ORIGINS = [
+    "https://mehrcoffenet2009.onrender.com",]
