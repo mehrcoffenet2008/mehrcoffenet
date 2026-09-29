@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import ThemeToggle from "./ThemeToggle";
+import { useAuth } from "../context/AuthContext";
 import "./Navbar.css";
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const closeMenu = () => {
     setMenuOpen(false);
@@ -26,6 +29,11 @@ function Navbar() {
     closeMenu();
   }, [location]);
 
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
+
   return (
     <motion.nav
       className={`navbar ${scrolled ? "scrolled" : ""}`}
@@ -40,6 +48,20 @@ function Navbar() {
 
         <div className="navbar-actions">
           <ThemeToggle />
+          {user ? (
+            <div className="navbar-user">
+              <Link to="/dashboard" className="navbar-user-link">
+                {user.first_name || user.username}
+              </Link>
+              <button className="navbar-logout" onClick={handleLogout}>
+                خروج
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" className="navbar-login">
+              ورود
+            </Link>
+          )}
           <button
             className="menu-button"
             onClick={() => setMenuOpen(!menuOpen)}

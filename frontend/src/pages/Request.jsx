@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import SEO from "../components/SEO";
+import { useAuth } from "../context/AuthContext";
 import "./Request.css";
 
 function Request() {
   const location = useLocation();
+  const { user, loading } = useAuth();
 
   const [services, setServices] = useState([]);
   const [form, setForm] = useState({
@@ -38,6 +40,18 @@ function Request() {
         setMessage("دریافت خدمات با مشکل مواجه شد.");
       });
   }, [location.state]);
+
+  if (loading) {
+    return (
+      <div className="request-loading">
+        <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
 
   const handleChange = (event) => {
     setForm({

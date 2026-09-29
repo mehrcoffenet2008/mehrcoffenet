@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
+import { AuthProvider } from "./context/AuthContext";
 import { lazy, Suspense } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -16,6 +17,9 @@ const Request = lazy(() => import("./pages/Request"));
 const Track = lazy(() => import("./pages/Track"));
 const About = lazy(() => import("./pages/About"));
 const Contact = lazy(() => import("./pages/Contact"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 function LoadingSpinner() {
   return (
@@ -53,6 +57,9 @@ function AnimatedRoutes() {
           <Route path="/track" element={<Track />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </Suspense>
     </AnimatePresence>
@@ -62,13 +69,15 @@ function AnimatedRoutes() {
 function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <CustomCursor />
-        <ParticleBackground />
-        <Navbar />
-        <AnimatedRoutes />
-        <Footer />
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <CustomCursor />
+          <ParticleBackground />
+          <Navbar />
+          <AnimatedRoutes />
+          <Footer />
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

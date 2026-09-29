@@ -181,6 +181,9 @@ STATICFILES_STORAGE = (
 # Serve frontend dist files at root (/, /assets/, etc.)
 WHITENOISE_ROOT = FRONTEND_DIST
 
+# Serve admin static files (css, js) at /static/
+WHITENOISE_ROOT = FRONTEND_DIST
+
 
 # =========================================================
 # CORS
