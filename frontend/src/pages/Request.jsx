@@ -1,35 +1,32 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import SEO from "../components/SEO";
 import "./Request.css";
 
 function Request() {
   const location = useLocation();
 
   const [services, setServices] = useState([]);
-
   const [form, setForm] = useState({
     customer_name: "",
     phone: "",
     service: "",
     description: "",
   });
-
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-   fetch("https://mehrcoffenet.onrender.com/api/services/")
+    fetch("/api/services/")
       .then((response) => {
         if (!response.ok) {
           throw new Error();
         }
-
         return response.json();
       })
       .then((data) => {
         setServices(data);
-
         const selectedServiceId = location.state?.serviceId;
-
         if (selectedServiceId) {
           setForm((previous) => ({
             ...previous,
@@ -56,7 +53,7 @@ function Request() {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    fetch("https://mehrcoffenet.onrender.com/api/orders/", {
+    fetch("/api/orders/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -72,14 +69,10 @@ function Request() {
         if (!response.ok) {
           throw new Error();
         }
-
         return response.json();
       })
       .then((data) => {
-        setMessage(
-          `درخواست شما ثبت شد. کد پیگیری: ${data.tracking_code}`
-        );
-
+        setMessage(`درخواست شما ثبت شد. کد پیگیری: ${data.tracking_code}`);
         setForm({
           customer_name: "",
           phone: "",
@@ -94,25 +87,31 @@ function Request() {
 
   return (
     <main className="request-page">
+      <SEO
+        title="ثبت سفارش | کافی‌نت مهر"
+        description="ثبت سفارش آنلاین خدمات کافی‌نت مهر شامل پرینت، اسکن، تایپ و خدمات اینترنتی."
+      />
       <div className="request-container">
-
-        <div className="request-header">
+        <motion.div
+          className="request-header"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <span>کافی‌نت مهر</span>
-
           <h1>ثبت سفارش</h1>
+          <p>مشخصات خود را وارد کنید تا سفارش شما ثبت و بررسی شود.</p>
+        </motion.div>
 
-          <p>
-            مشخصات خود را وارد کنید تا سفارش شما ثبت و بررسی شود.
-          </p>
-        </div>
-
-        <div className="request-card">
-
+        <motion.div
+          className="request-card"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+        >
           <form onSubmit={handleSubmit}>
-
             <div className="form-group">
               <label>نام و نام خانوادگی</label>
-
               <input
                 type="text"
                 name="customer_name"
@@ -125,7 +124,6 @@ function Request() {
 
             <div className="form-group">
               <label>شماره تماس</label>
-
               <input
                 type="tel"
                 name="phone"
@@ -138,7 +136,6 @@ function Request() {
 
             <div className="form-group">
               <label>خدمت مورد نظر</label>
-
               <select
                 name="service"
                 value={form.service}
@@ -146,7 +143,6 @@ function Request() {
                 required
               >
                 <option value="">انتخاب خدمت</option>
-
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
                     {service.name}
@@ -156,20 +152,22 @@ function Request() {
             </div>
 
             {selectedService && (
-              <div className="selected-service">
+              <motion.div
+                className="selected-service"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+              >
                 <span>خدمت انتخاب‌شده</span>
-
                 <strong>{selectedService.name}</strong>
-
                 <b>
                   {Number(selectedService.price).toLocaleString("fa-IR")} تومان
                 </b>
-              </div>
+              </motion.div>
             )}
 
             <div className="form-group">
               <label>توضیحات درخواست</label>
-
               <textarea
                 name="description"
                 value={form.description}
@@ -178,18 +176,27 @@ function Request() {
               />
             </div>
 
-            <button type="submit" className="request-submit">
+            <motion.button
+              type="submit"
+              className="request-submit"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
               ثبت سفارش
-            </button>
-
+            </motion.button>
           </form>
 
           {message && (
-            <div className="request-message">
+            <motion.div
+              className="request-message"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
               {message}
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </div>
     </main>
   );

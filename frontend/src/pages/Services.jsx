@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import ScrollReveal from "../components/ScrollReveal";
+import SEO from "../components/SEO";
 import "./Services.css";
 
 function Services() {
@@ -8,12 +11,11 @@ function Services() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("https://mehrcoffenet.onrender.com/api/services/")
+    fetch("/api/services/")
       .then((response) => {
         if (!response.ok) {
           throw new Error("خطا در دریافت خدمات");
         }
-
         return response.json();
       })
       .then((data) => {
@@ -28,18 +30,39 @@ function Services() {
 
   return (
     <main className="services-page">
+      <SEO
+        title="خدمات | کافی‌نت مهر"
+        description="مشاهده خدمات کافی‌نت مهر شامل پرینت، اسکن، تایپ، ثبت‌نام اینترنتی و خدمات آنلاین."
+      />
       <section className="services-header">
-        <span>خدمات کافی‌نت مهر</span>
+        <motion.span
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          خدمات کافی‌نت مهر
+        </motion.span>
 
-        <h1>خدمات ما</h1>
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+        >
+          خدمات ما
+        </motion.h1>
 
-        <p>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+        >
           خدمات اینترنتی و کامپیوتری مورد نیاز شما، با دقت و سرعت مناسب.
-        </p>
+        </motion.p>
       </section>
 
       {loading && (
         <div className="services-message">
+          <div className="loading-spinner"></div>
           در حال دریافت خدمات...
         </div>
       )}
@@ -52,18 +75,21 @@ function Services() {
 
       {!loading && !error && services.length > 0 && (
         <section className="services-grid">
-          {services.map((service) => (
-            <article className="service-item" key={service.id}>
+          {services.map((service, index) => (
+            <motion.article
+              className="service-item"
+              key={service.id}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.5 }}
+              whileHover={{ y: -5 }}
+            >
               <div className="service-item-icon">💻</div>
-
               <h2>{service.name}</h2>
-
               <p>{service.description}</p>
-
               <div className="service-price">
                 {Number(service.price).toLocaleString("fa-IR")} تومان
               </div>
-
               <Link
                 to="/request"
                 state={{ serviceId: service.id }}
@@ -71,7 +97,7 @@ function Services() {
               >
                 ثبت سفارش این خدمت
               </Link>
-            </article>
+            </motion.article>
           ))}
         </section>
       )}

@@ -1,62 +1,53 @@
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import "./Footer.css";
 
 function Footer() {
   return (
-    <footer className="footer">
+    <motion.footer
+      className="footer"
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+    >
       <div className="footer-container">
-        <div className="footer-brand">
-          <img src="/images/logo.png" alt="کافی‌نت مهر" />
+        <div className="footer-content">
+          <div className="footer-section">
+            <div className="footer-logo">
+              <img src="/images/logo.png" alt="لوگوی کافی‌نت مهر" />
+            </div>
+            <p>
+              کافی‌نت مهر با هدف ارائه خدمات اینترنتی و کامپیوتری
+              با سرعت، دقت و اطمینان فعالیت می‌کند.
+            </p>
+          </div>
 
-          <h3>کافی‌نت مهر</h3>
+          <div className="footer-section">
+            <h3>دسترسی سریع</h3>
+            <ul>
+              <li><Link to="/">خانه</Link></li>
+              <li><Link to="/services">خدمات</Link></li>
+              <li><Link to="/request">ثبت درخواست</Link></li>
+              <li><Link to="/track">پیگیری درخواست</Link></li>
+            </ul>
+          </div>
 
-          <p>
-            خدمات اینترنتی و کامپیوتری با سرعت، دقت و اطمینان.
-          </p>
+          <div className="footer-section">
+            <h3>ارتباط با ما</h3>
+            <ul>
+              <li><a href="tel:09033827307">09033827307</a></li>
+              <li><a href="https://instagram.com/mehrcoffenet" target="_blank" rel="noreferrer">@mehrcoffenet</a></li>
+              <li><Link to="/contact">تماس با ما</Link></li>
+            </ul>
+          </div>
         </div>
 
-        <div className="footer-links">
-          <h4>دسترسی سریع</h4>
-
-          <Link to="/">خانه</Link>
-          <Link to="/services">خدمات</Link>
-          <Link to="/request">ثبت درخواست</Link>
-          <Link to="/track">پیگیری درخواست</Link>
-        </div>
-
-        <div className="footer-contact">
-          <h4>ارتباط با ما</h4>
-
-          <p>📍 ورامین، بلوار شهید قدوسی، بعد از میدان ولیعصر، بلوار شهید سلیمانی، شهرک احمدیه</p>
-
-<p>
-  📞{" "}
-  <a href="tel:09033827307">
-    09033827307
-  </a>
-</p>
-
-<p>
-  📩{" "}
-  <a
-    href="https://instagram.com/mehrcoffenet"
-    target="_blank"
-    rel="noreferrer"
-  >
-    @mehrcoffenet
-  </a>
-</p>
-
-<p>🕐 ۹ تا ۱۳ و ۱۶ تا ۲۱</p>
+        <div className="footer-bottom">
+          <p>© {new Date().getFullYear()} کافی‌نت مهر. تمامی حقوق محفوظ است.</p>
         </div>
       </div>
-
-      <div className="footer-bottom">
-        <p>
-          © {new Date().getFullYear()} کافی‌نت مهر — تمامی حقوق محفوظ است.
-        </p>
-      </div>
-    </footer>
+    </motion.footer>
   );
 }
 
