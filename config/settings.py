@@ -178,6 +178,9 @@ STATICFILES_STORAGE = (
     "whitenoise.storage.CompressedManifestStaticFilesStorage"
 )
 
+# Serve frontend dist files at root (/, /assets/, etc.)
+WHITENOISE_ROOT = FRONTEND_DIST
+
 
 # =========================================================
 # CORS
