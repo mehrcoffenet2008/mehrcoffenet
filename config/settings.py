@@ -112,7 +112,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # =========================================================
 
-if os.environ.get("RENDER"):
+if os.environ.get("RENDER") and os.environ.get("DATABASE_URL"):
     DATABASES = {
         "default": dj_database_url.parse(
             os.environ.get("DATABASE_URL"),
@@ -166,6 +166,13 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Frontend build output (Vite)
+FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
+
+STATICFILES_DIRS = [
+    FRONTEND_DIST / "assets",
+]
 
 STATICFILES_STORAGE = (
     "whitenoise.storage.CompressedManifestStaticFilesStorage"
