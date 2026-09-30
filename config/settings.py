@@ -262,6 +262,7 @@ KAVENEGAR_API_KEY = os.environ.get("KAVENEGAR_API_KEY", "")
 SMS_IR_USERNAME = os.environ.get("SMS_IR_USERNAME", "")
 SMS_IR_API_KEY = os.environ.get("SMS_IR_API_KEY", "")
 SMS_IR_LINE = os.environ.get("SMS_IR_LINE", "")
+SMS_IR_TEMPLATE_ID = os.environ.get("SMS_IR_TEMPLATE_ID", "")
 
 
 # =========================================================
