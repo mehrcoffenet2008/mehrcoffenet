@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .models import Order
 from .serializers import OrderSerializer
-from config.sms import notify_order_created, notify_order_status
+from config.emails import notify_order_created, notify_order_status
 
 import uuid
 
@@ -30,21 +30,26 @@ class OrderViewSet(viewsets.ModelViewSet):
             user=self.request.user
         )
 
-        # SMS notification (never blocks the response)
-        notify_order_created(
-            order.phone,
-            tracking_code,
-            order.service.name,
-        )
+        # Email notification (never blocks the response)
+        user_email = self.request.user.email
+        if user_email:
+            notify_order_created(
+                user_email,
+                tracking_code,
+                order.service.name,
+            )
 
     def perform_update(self, serializer):
         order = serializer.save()
         status_labels = dict(Order.STATUS_CHOICES)
-        notify_order_status(
-            order.phone,
-            order.tracking_code,
-            status_labels.get(order.status, order.status),
-        )
+
+        user_email = order.user.email if order.user else ""
+        if user_email:
+            notify_order_status(
+                user_email,
+                order.tracking_code,
+                status_labels.get(order.status, order.status),
+            )
 
 
     def perform_create(self, serializer):

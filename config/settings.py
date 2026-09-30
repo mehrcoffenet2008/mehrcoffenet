@@ -262,10 +262,23 @@ KAVENEGAR_API_KEY = os.environ.get("KAVENEGAR_API_KEY", "")
 
 
 # =========================================================
-# Email
+# Email (SMTP) — configure via environment variables
+# Local dev: no config → emails print to console
 # =========================================================
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@mehrcoffenet.com")
+
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
+
+if EMAIL_HOST and EMAIL_HOST_USER:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+else:
+    # Local dev: print emails to console
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
 # =========================================================
