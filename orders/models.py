@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from services.models import Service
 
 
@@ -10,6 +11,14 @@ class Order(models.Model):
         ("completed", "تکمیل شده"),
         ("cancelled", "لغو شده"),
     ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="orders",
+        null=True,
+        blank=True
+    )
 
     tracking_code = models.CharField(
         max_length=20,

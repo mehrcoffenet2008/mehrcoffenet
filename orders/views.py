@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 
 from .models import Order
 from .serializers import OrderSerializer
@@ -12,13 +13,15 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     queryset = Order.objects.all().order_by("-created_at")
     serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
 
 
     def perform_create(self, serializer):
         tracking_code = uuid.uuid4().hex[:10].upper()
 
         serializer.save(
-            tracking_code=tracking_code
+            tracking_code=tracking_code,
+            user=self.request.user
         )
 
 
