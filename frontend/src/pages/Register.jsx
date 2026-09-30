@@ -26,6 +26,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const [devCode, setDevCode] = useState(null);
   const [countdown, setCountdown] = useState(0);
   const [formData, setFormData] = useState({
     username: "",
@@ -73,6 +74,10 @@ export default function Register() {
       setCodeSent(true);
       setCountdown(60);
       setStep(2);
+      // Dev mode: show code on screen when SMTP not configured
+      if (data.dev_code) {
+        setDevCode(data.dev_code);
+      }
     } else {
       setError(data.error);
     }
@@ -216,6 +221,19 @@ export default function Register() {
                   <small className="form-hint">
                     کد به ایمیل <strong>{email}</strong> ارسال شد
                   </small>
+                  {devCode && (
+                    <div className="dev-code-box">
+                      <span>کد تست (حالت توسعه):</span>
+                      <strong>{devCode}</strong>
+                      <button
+                        type="button"
+                        className="dev-code-use"
+                        onClick={() => setCode(devCode)}
+                      >
+                        استفاده از این کد
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <button type="submit" className="auth-submit" disabled={loading}>

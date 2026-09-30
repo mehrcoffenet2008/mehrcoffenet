@@ -11,6 +11,9 @@ import re
 
 from accounts.models import Profile
 from config.verification import send_code, verify_code, is_verified, clear_verification
+from django.conf import settings
+
+EMAIL_HOST = getattr(settings, "EMAIL_HOST", "")
 
 # Rate limiting: max 5 failed attempts per username/IP, then 15 min lock
 MAX_LOGIN_ATTEMPTS = 5
@@ -316,8 +319,20 @@ class SendCodeView(View):
 
             result = send_code(email)
             if result["success"]:
+                # Dev mode: return code in response when SMTP not configured
+                dev_code = None
+                if not EMAIL_HOST:
+                    from django.core.cache import cache
+                    stored = cache.get(f"reg_code:{email}")
+                    if stored:
+                        dev_code = stored["code"]
+
                 return JsonResponse(
-                    {"success": True, "message": "کد تایید به ایمیل شما ارسال شد"}
+                    {
+                        "success": True,
+                        "message": "کد تایید به ایمیل شما ارسال شد",
+                        "dev_code": dev_code,
+                    }
                 )
             return JsonResponse({"error": result.get("error", "خطا")}, status=400)
         except json.JSONDecodeError:

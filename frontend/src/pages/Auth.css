@@ -315,6 +315,46 @@
   color: var(--text-muted);
 }
 
+/* Dev code box */
+.dev-code-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.dev-code-box strong {
+  font-size: 18px;
+  font-weight: 700;
+  color: #22c55e;
+  letter-spacing: 4px;
+  direction: ltr;
+}
+
+.dev-code-use {
+  margin-right: auto;
+  padding: 4px 10px;
+  background: #22c55e;
+  color: #0a0a0a;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.25s ease;
+}
+
+.dev-code-use:hover {
+  opacity: 0.85;
+}
+
 @media (max-width: 480px) {
   .auth-card {
     padding: 32px 20px;
