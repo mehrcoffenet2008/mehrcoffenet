@@ -127,7 +127,8 @@ export default function Register() {
                     className="ltr-input"
                   />
                   <small className="form-hint">
-                    شماره موبایل برای شناسایی و اطلاع‌رسانی استفاده می‌شود
+                    شماره موبایل فقط برای شناسایی یکتای حساب استفاده می‌شود
+                    (اطلاع‌رسانی‌ها از طریق ایمیل ارسال می‌شود)
                   </small>
                 </div>
 
