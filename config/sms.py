@@ -1,10 +1,9 @@
 """
-SMS notifications via sms.ir API using template.
+SMS notifications via sms.ir API (simple send, no template).
 
 Required env vars:
   SMS_IR_USERNAME  e.g. your sms.ir username
   SMS_IR_API_KEY   e.g. qQbekVmGc3kVAmmUQBeIfhyt851hqfAd7b2f7B3bDnThRJod
-  SMS_IR_TEMPLATE_ID  e.g. 3000333
 """
 import logging
 import urllib.request
@@ -17,58 +16,6 @@ logger = logging.getLogger(__name__)
 
 SMS_IR_USERNAME = getattr(settings, "SMS_IR_USERNAME", "")
 SMS_IR_API_KEY = getattr(settings, "SMS_IR_API_KEY", "")
-SMS_IR_TEMPLATE_ID = getattr(settings, "SMS_IR_TEMPLATE_ID", "")
-
-
-def send_sms_template(phone: str, template_id: str, params: dict) -> bool:
-    """Send SMS via sms.ir template. Returns True on success."""
-    if not SMS_IR_USERNAME or not SMS_IR_API_KEY:
-        logger.warning("SMS.ir not configured")
-        return False
-
-    if not phone or not template_id:
-        return False
-
-    # Normalize phone number
-    phone = phone.strip().replace(" ", "").replace("-", "")
-    if phone.startswith("0"):
-        phone = "98" + phone[1:]
-    elif phone.startswith("+"):
-        phone = phone[1:]
-
-    # Build parameters
-    query_params = {
-        "username": SMS_IR_USERNAME,
-        "password": SMS_IR_API_KEY,
-        "mobile": phone,
-        "templateId": template_id,
-    }
-
-    # Add template parameters
-    for key, value in params.items():
-        query_params[f"param{key}"] = value
-
-    query_string = urllib.parse.urlencode(query_params)
-    url = f"https://api.sms.ir/v1/send/template?{query_string}"
-
-    req = urllib.request.Request(
-        url,
-        headers={
-            "Accept": "application/json",
-        },
-        method="GET",
-    )
-
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode())
-            if result.get("status") == 1:
-                return True
-            logger.warning("SMS error: %s", result)
-            return False
-    except Exception as exc:
-        logger.warning("SMS error: %s", exc)
-        return False
 
 
 def send_sms(phone: str, message: str) -> bool:
@@ -118,10 +65,7 @@ def send_sms(phone: str, message: str) -> bool:
 
 
 def send_verification_code(phone: str, code: str) -> bool:
-    """Send verification code via SMS template."""
-    if SMS_IR_TEMPLATE_ID:
-        return send_sms_template(phone, SMS_IR_TEMPLATE_ID, {"CODE": code})
-    # Fallback to simple SMS
+    """Send verification code via SMS."""
     message = f"کد تایید شما در کافی‌نت مهر:\n\n{code}\n\nاین کد به مدت ۱۰ دقیقه معتبر است."
     return send_sms(phone, message)
 
