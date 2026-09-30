@@ -301,37 +301,36 @@ class CSRFView(View):
 
 @method_decorator(csrf_exempt, name="dispatch")
 class SendCodeView(View):
-    """Step 1: Send verification code to email."""
+    """Step 1: Send verification code to phone via SMS."""
 
     def post(self, request):
         try:
             data = json.loads(request.body)
-            email = data.get("email", "").strip().lower()
+            phone = data.get("phone", "").strip().replace(" ", "").replace("-", "")
 
-            if not email or "@" not in email:
-                return JsonResponse({"error": "ایمیل معتبر نیست"}, status=400)
+            if not phone or len(phone) < 10:
+                return JsonResponse({"error": "شماره موبایل معتبر نیست"}, status=400)
 
-            # If email already registered, suggest login
-            if User.objects.filter(email__iexact=email).exists():
+            # If phone already registered, suggest login
+            if Profile.objects.filter(phone=phone).exists():
                 return JsonResponse(
-                    {"error": "این ایمیل قبلاً ثبت شده است. وارد شوید."},
+                    {"error": "این شماره موبایل قبلاً ثبت شده است. وارد شوید."},
                     status=400,
                 )
 
-            result = send_code(email)
+            result = send_code(phone)
             if result["success"]:
-                # Dev mode: return code in response when SMTP not configured
+                # Dev mode: return code in response when SMS not configured
                 dev_code = None
-                if not EMAIL_HOST:
-                    from django.core.cache import cache
-                    stored = cache.get(f"reg_code:{email}")
-                    if stored:
-                        dev_code = stored["code"]
+                from django.core.cache import cache
+                stored = cache.get(f"reg_code:{phone}")
+                if stored:
+                    dev_code = stored["code"]
 
                 return JsonResponse(
                     {
                         "success": True,
-                        "message": "کد تایید به ایمیل شما ارسال شد",
+                        "message": "کد تایید به موبایل شما ارسال شد",
                         "dev_code": dev_code,
                     }
                 )
@@ -349,13 +348,13 @@ class VerifyCodeView(View):
     def post(self, request):
         try:
             data = json.loads(request.body)
-            email = data.get("email", "").strip().lower()
+            phone = data.get("phone", "").strip().replace(" ", "").replace("-", "")
             code = data.get("code", "").strip()
 
-            result = verify_code(email, code)
+            result = verify_code(phone, code)
             if result["success"]:
                 return JsonResponse(
-                    {"success": True, "message": "ایمیل تایید شد"}
+                    {"success": True, "message": "شماره موبایل تایید شد"}
                 )
             return JsonResponse({"error": result.get("error", "خطا")}, status=400)
         except json.JSONDecodeError:
@@ -371,17 +370,17 @@ class CompleteRegistrationView(View):
     def post(self, request):
         try:
             data = json.loads(request.body)
-            email = data.get("email", "").strip().lower()
+            phone = data.get("phone", "").strip().replace(" ", "").replace("-", "")
             username = data.get("username", "").strip()
             password = data.get("password", "")
             first_name = data.get("first_name", "").strip()
             last_name = data.get("last_name", "").strip()
-            phone = data.get("phone", "").strip().replace(" ", "").replace("-", "")
+            email = data.get("email", "").strip().lower()
 
             # Must be verified first
-            if not is_verified(email):
+            if not is_verified(phone):
                 return JsonResponse(
-                    {"error": "ابتدا ایمیل خود را تایید کنید"}, status=400
+                    {"error": "ابتدا شماره موبایل خود را تایید کنید"}, status=400
                 )
 
             if not username or not password or not first_name or not last_name:
@@ -405,37 +404,35 @@ class CompleteRegistrationView(View):
                     {"error": "این نام کاربری قبلاً ثبت شده است"}, status=400
                 )
 
+            if not IRAN_PHONE_RE.match(phone):
+                return JsonResponse(
+                    {"error": "شماره موبایل معتبر نیست (مثال: 09123456789)"},
+                    status=400,
+                )
+
+            if Profile.objects.filter(phone=phone).exists():
+                return JsonResponse(
+                    {"error": "این شماره موبایل قبلاً ثبت شده است"}, status=400
+                )
+
             # Create user
             user = User.objects.create_user(
                 username=username,
                 password=password,
-                email=email,
+                email=email or f"{username}@mehrcoffenet.com",
                 first_name=first_name,
                 last_name=last_name,
             )
 
-            # Phone is optional now (email is the identifier)
-            if phone:
-                if not IRAN_PHONE_RE.match(phone):
-                    user.delete()
-                    return JsonResponse(
-                        {"error": "شماره موبایل معتبر نیست (مثال: 09123456789)"},
-                        status=400,
-                    )
-                if Profile.objects.filter(phone=phone).exists():
-                    user.delete()
-                    return JsonResponse(
-                        {"error": "این شماره موبایل قبلاً ثبت شده است"}, status=400
-                    )
-                Profile.objects.create(user=user, phone=phone)
+            Profile.objects.create(user=user, phone=phone)
 
-            clear_verification(email)
+            clear_verification(phone)
             login(request, user)
             request.session.set_expiry(60 * 60 * 24 * 14)
 
-            # Welcome email
-            from config.emails import notify_welcome
-            notify_welcome(email, first_name)
+            # Welcome SMS
+            from config.sms import send_sms
+            send_sms(phone, f"{first_name} عزیز، خوش آمدید! حساب شما در کافی‌نت مهر ساخته شد.")
 
             return JsonResponse(
                 {"success": True, "user": user_json(user)}, status=201

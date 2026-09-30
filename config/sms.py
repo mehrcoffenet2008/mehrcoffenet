@@ -1,81 +1,88 @@
 """
-SMS notification via Kavenegar API.
-Get a free API key at: https://kavenegar.com
-Set KAVENEGAR_API_KEY in settings or environment.
+SMS notifications via sms.ir API.
 
-Uses urllib (stdlib) so no extra dependency is needed.
+Required env var:
+  SMS_IR_API_KEY  e.g. qQbekVmGc3kVAmmUQBeIfhyt851hqfAd7b2f7B3bDnThRJod
 """
-import json
-import os
 import logging
 import urllib.request
-import urllib.parse
+import json
 
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-API_KEY = os.environ.get("KAVENEGAR_API_KEY", getattr(settings, "KAVENEGAR_API_KEY", ""))
-BASE_URL = "https://api.kavenegar.com/v1"
+SMS_IR_API_KEY = getattr(settings, "SMS_IR_API_KEY", "")
 
 
 def send_sms(phone: str, message: str) -> bool:
-    """Send a single SMS. Returns True on success, False otherwise.
-
-    Never raises — SMS failure must not break the main flow.
-    """
-    if not API_KEY:
-        logger.info("KAVENEGAR_API_KEY not set — skipping SMS to %s", phone)
+    """Send SMS via sms.ir API. Returns True on success."""
+    if not SMS_IR_API_KEY:
+        logger.warning("SMS_IR_API_KEY not configured")
         return False
 
-    if not phone:
+    if not phone or not message:
         return False
+
+    # Normalize phone number
+    phone = phone.strip().replace(" ", "").replace("-", "")
+    if phone.startswith("0"):
+        phone = "98" + phone[1:]
+    elif phone.startswith("+"):
+        phone = phone[1:]
+
+    url = "https://api.sms.ir/v1/send/simple"
+
+    payload = {
+        "mobile": phone,
+        "message": message,
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "Authorization": f"Bearer {SMS_IR_API_KEY}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        method="POST",
+    )
 
     try:
-        data = urllib.parse.urlencode(
-            {"receptor": phone, "message": message}
-        ).encode("utf-8")
-
-        req = urllib.request.Request(
-            f"{BASE_URL}/{API_KEY}/sms/send.json",
-            data=data,
-            method="POST",
-        )
-
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            if resp.status == 200:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode())
+            if result.get("status") == 1 or result.get("code") == 1:
                 return True
-            logger.warning("SMS failed (%s)", resp.status)
+            logger.warning("SMS error: %s", result)
             return False
     except Exception as exc:
         logger.warning("SMS error: %s", exc)
         return False
 
 
-def notify_order_created(phone: str, tracking_code: str, service_name: str) -> bool:
+def send_verification_code(phone: str, code: str) -> bool:
+    """Send verification code via SMS."""
+    message = f"کد تایید شما در کافی‌نت مهر:\n\n{code}\n\nاین کد به مدت ۱۰ دقیقه معتبر است."
+    return send_sms(phone, message)
+
+
+def send_order_notification(phone: str, tracking_code: str, service_name: str) -> bool:
+    """Send order notification via SMS."""
     message = (
-        f"کافی‌نت مهر\n"
-        f"سفارش شما ثبت شد.\n"
+        f"سفارش شما در کافی‌نت مهر ثبت شد.\n\n"
         f"خدمت: {service_name}\n"
+        f"کد پیگیری: {tracking_code}"
+    )
+    return send_sms(phone, message)
+
+
+def send_status_notification(phone: str, tracking_code: str, status_label: str) -> bool:
+    """Send order status notification via SMS."""
+    message = (
+        f"وضعیت سفارش شما در کافی‌نت مهر تغییر کرد.\n\n"
         f"کد پیگیری: {tracking_code}\n"
-        f"برای پیگیری به سایت مراجعه کنید."
-    )
-    return send_sms(phone, message)
-
-
-def notify_order_status(phone: str, tracking_code: str, status_label: str) -> bool:
-    message = (
-        f"کافی‌نت مهر\n"
-        f"وضعیت سفارش {tracking_code} تغییر کرد.\n"
         f"وضعیت جدید: {status_label}"
-    )
-    return send_sms(phone, message)
-
-
-def notify_welcome(phone: str, first_name: str) -> bool:
-    message = (
-        f"کافی‌نت مهر\n"
-        f"{first_name} عزیز، خوش آمدید!\n"
-        f"حساب شما با موفقیت ساخته شد."
     )
     return send_sms(phone, message)

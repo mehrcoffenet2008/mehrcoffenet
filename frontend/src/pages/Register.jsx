@@ -23,7 +23,7 @@ function passwordStrength(pw) {
 
 export default function Register() {
   const [step, setStep] = useState(1);
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [devCode, setDevCode] = useState(null);
@@ -33,7 +33,7 @@ export default function Register() {
     password: "",
     first_name: "",
     last_name: "",
-    phone: "",
+    email: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,7 +56,7 @@ export default function Register() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Step 1: Send code
+  // Step 1: Send code via SMS
   const handleSendCode = async (e) => {
     e.preventDefault();
     setError("");
@@ -65,7 +65,7 @@ export default function Register() {
     const res = await fetch("/api/auth/send-code/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ phone }),
     });
     const data = await res.json();
     setLoading(false);
@@ -74,7 +74,7 @@ export default function Register() {
       setCodeSent(true);
       setCountdown(60);
       setStep(2);
-      // Dev mode: show code on screen when SMTP not configured
+      // Dev mode: show code on screen when SMS not configured
       if (data.dev_code) {
         setDevCode(data.dev_code);
       }
@@ -92,7 +92,7 @@ export default function Register() {
     const res = await fetch("/api/auth/verify-code/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, code }),
+      body: JSON.stringify({ phone, code }),
     });
     const data = await res.json();
     setLoading(false);
@@ -115,7 +115,7 @@ export default function Register() {
     }
 
     setLoading(true);
-    const result = await register({ ...formData, email });
+    const result = await register({ ...formData, phone });
     setLoading(false);
 
     if (result.success) {
@@ -126,7 +126,7 @@ export default function Register() {
   };
 
   const stepTitles = {
-    1: "ایمیل",
+    1: "شماره موبایل",
     2: "کد تایید",
     3: "مشخصات شما",
   };
@@ -135,7 +135,7 @@ export default function Register() {
     <main className="auth-page">
       <SEO
         title="ثبت‌نام | کافی‌نت مهر"
-        description="ثبت‌نام در کافی‌نت مهر با ایمیل"
+        description="ثبت‌نام در کافی‌نت مهر با شماره موبایل"
       />
       <div className="auth-container">
         <motion.div
@@ -160,7 +160,7 @@ export default function Register() {
           {error && <div className="auth-error">{error}</div>}
 
           <AnimatePresence mode="wait">
-            {/* Step 1: Email */}
+            {/* Step 1: Phone */}
             {step === 1 && (
               <motion.form
                 key="step1"
@@ -172,18 +172,21 @@ export default function Register() {
                 transition={{ duration: 0.25 }}
               >
                 <div className="form-group">
-                  <label>ایمیل *</label>
+                  <label>شماره موبایل *</label>
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="example@email.com"
-                    autoComplete="email"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) =>
+                      setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))
+                    }
+                    placeholder="09123456789"
+                    inputMode="numeric"
+                    autoComplete="tel"
                     required
                     className="ltr-input"
                   />
                   <small className="form-hint">
-                    کد تایید به این ایمیل ارسال می‌شود
+                    کد تایید به این شماره ارسال می‌شود
                   </small>
                 </div>
 
@@ -219,7 +222,7 @@ export default function Register() {
                     className="ltr-input code-input"
                   />
                   <small className="form-hint">
-                    کد به ایمیل <strong>{email}</strong> ارسال شد
+                    کد به شماره <strong>{phone}</strong> ارسال شد
                   </small>
                   {devCode && (
                     <div className="dev-code-box">
@@ -263,7 +266,7 @@ export default function Register() {
                       setCode("");
                     }}
                   >
-                    تغییر ایمیل
+                    تغییر شماره
                   </button>
                 </div>
               </motion.form>
@@ -360,19 +363,14 @@ export default function Register() {
                 </div>
 
                 <div className="form-group">
-                  <label>شماره موبایل (اختیاری)</label>
+                  <label>ایمیل (اختیاری)</label>
                   <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        phone: e.target.value.replace(/\D/g, "").slice(0, 11),
-                      })
-                    }
-                    placeholder="09123456789"
-                    inputMode="numeric"
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="example@email.com"
+                    autoComplete="email"
                     className="ltr-input"
                   />
                 </div>

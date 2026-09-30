@@ -259,6 +259,7 @@ if not DEBUG:
 # =========================================================
 
 KAVENEGAR_API_KEY = os.environ.get("KAVENEGAR_API_KEY", "")
+SMS_IR_API_KEY = os.environ.get("SMS_IR_API_KEY", "")
 
 
 # =========================================================
