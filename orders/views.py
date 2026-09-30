@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .models import Order
 from .serializers import OrderSerializer
@@ -28,7 +28,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     @action(
         detail=False,
         methods=["get"],
-        url_path=r"track/(?P<tracking_code>[^/.]+)"
+        url_path=r"track/(?P<tracking_code>[^/.]+)",
+        permission_classes=[AllowAny]
     )
     def track(self, request, tracking_code=None):
 

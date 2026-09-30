@@ -57,6 +57,20 @@ INSTALLED_APPS = [
 
 
 # =========================================================
+# Django REST Framework
+# =========================================================
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "config.auth.CsrfExemptSessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
+
+# =========================================================
 # Middleware
 # =========================================================
 
