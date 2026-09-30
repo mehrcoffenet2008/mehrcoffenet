@@ -6,7 +6,7 @@ import SEO from "../components/SEO";
 import "./Auth.css";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
@@ -16,9 +16,9 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const saved = localStorage.getItem("remembered_username");
+    const saved = localStorage.getItem("remembered_login_id");
     if (saved) {
-      setUsername(saved);
+      setLoginId(saved);
       setRemember(true);
     }
   }, []);
@@ -28,7 +28,7 @@ export default function Login() {
     setError("");
     setLoading(true);
 
-    const result = await login(username, password, remember);
+    const result = await login(loginId, password, remember);
     setLoading(false);
 
     if (result.success) {
@@ -60,12 +60,12 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
-              <label>نام کاربری</label>
+              <label>نام کاربری یا ایمیل</label>
               <input
                 type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="نام کاربری خود را وارد کنید"
+                value={loginId}
+                onChange={(e) => setLoginId(e.target.value)}
+                placeholder="نام کاربری یا ایمیل خود را وارد کنید"
                 autoComplete="username"
                 required
               />

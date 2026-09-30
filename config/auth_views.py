@@ -46,26 +46,41 @@ class LoginView(View):
     def post(self, request):
         try:
             data = json.loads(request.body)
-            username = data.get("username", "").strip()
+            login_id = data.get("username", data.get("email", "")).strip()
             password = data.get("password", "")
             remember = data.get("remember", False)
 
-            if not username or not password:
+            if not login_id or not password:
                 return JsonResponse(
-                    {"error": "نام کاربری و رمز عبور الزامی است"}, status=400
+                    {"error": "نام کاربری یا ایمیل و رمز عبور الزامی است"}, status=400
                 )
+
+            # Find user by email OR username
+            target_user = None
+            if "@" in login_id:
+                try:
+                    target_user = User.objects.get(email__iexact=login_id)
+                except User.DoesNotExist:
+                    target_user = None
+            else:
+                target_user = User.objects.filter(username__iexact=login_id).first()
 
             # Rate limiting check
             ip = _client_ip(request)
-            lock_key = f"login_lock:{username}:{ip}"
-            fail_key = f"login_fail:{username}:{ip}"
+            lock_key = f"login_lock:{login_id}:{ip}"
+            fail_key = f"login_fail:{login_id}:{ip}"
             if cache.get(lock_key):
                 return JsonResponse(
                     {"error": "به دلیل تلاش‌های ناموفق، ورود موقتاً مسدود شد. ۱۵ دقیقه دیگر دوباره تلاش کنید."},
                     status=429,
                 )
 
-            user = authenticate(request, username=username, password=password)
+            user = None
+            if target_user is not None:
+                user = authenticate(
+                    request, username=target_user.username, password=password
+                )
+
             if user is None:
                 fails = cache.get(fail_key, 0) + 1
                 cache.set(fail_key, fails, LOCKOUT_SECONDS)
@@ -76,7 +91,7 @@ class LoginView(View):
                         status=429,
                     )
                 return JsonResponse(
-                    {"error": f"نام کاربری یا رمز عبور اشتباه است ({MAX_LOGIN_ATTEMPTS - fails} تلاش باقی مانده)"},
+                    {"error": f"ایمیل یا رمز عبور اشتباه است ({MAX_LOGIN_ATTEMPTS - fails} تلاش باقی مانده)"},
                     status=401,
                 )
 
@@ -113,6 +128,18 @@ class RegisterView(View):
                 return JsonResponse(
                     {"error": "شماره موبایل، نام، نام خانوادگی، نام کاربری و رمز عبور الزامی است"},
                     status=400,
+                )
+
+            # Email is required (login is via email)
+            if not email:
+                return JsonResponse(
+                    {"error": "ایمیل الزامی است (ورود با ایمیل انجام می‌شود)"},
+                    status=400,
+                )
+
+            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+                return JsonResponse(
+                    {"error": "ایمیل معتبر نیست"}, status=400
                 )
 
             # Phone validation (Iranian format)

@@ -17,19 +17,19 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (username, password, remember = false) => {
+  const login = async (loginId, password, remember = false) => {
     const res = await fetch("/api/auth/login/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, remember }),
+      body: JSON.stringify({ username: loginId, email: loginId, password, remember }),
     });
     const data = await res.json();
     if (res.ok) {
       setUser(data.user);
       if (remember) {
-        localStorage.setItem("remembered_username", username);
+        localStorage.setItem("remembered_login_id", loginId);
       } else {
-        localStorage.removeItem("remembered_username");
+        localStorage.removeItem("remembered_login_id");
       }
       return { success: true };
     }
