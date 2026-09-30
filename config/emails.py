@@ -49,6 +49,17 @@ def notify_welcome(email: str, first_name: str) -> bool:
     return _send(email, "خوش آمدید", body)
 
 
+def send_verification_code(email: str, code: str) -> bool:
+    body = (
+        f"کد تایید شما در {BRAND}:\n\n"
+        f"{code}\n\n"
+        f"این کد به مدت ۱۰ دقیقه معتبر است.\n"
+        f"اگر شما این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید.\n\n"
+        f"با احترام،\n{BRAND}"
+    )
+    return _send(email, f"کد تایید {BRAND}", body)
+
+
 def notify_order_created(email: str, tracking_code: str, service_name: str) -> bool:
     body = (
         f"سفارش شما با موفقیت ثبت شد.\n\n"

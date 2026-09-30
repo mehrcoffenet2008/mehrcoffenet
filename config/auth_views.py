@@ -10,6 +10,7 @@ import json
 import re
 
 from accounts.models import Profile
+from config.verification import send_code, verify_code, is_verified, clear_verification
 
 # Rate limiting: max 5 failed attempts per username/IP, then 15 min lock
 MAX_LOGIN_ATTEMPTS = 5
@@ -293,3 +294,129 @@ class ChangePasswordView(View):
 class CSRFView(View):
     def get(self, request):
         return JsonResponse({"success": True})
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SendCodeView(View):
+    """Step 1: Send verification code to email."""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            email = data.get("email", "").strip().lower()
+
+            if not email or "@" not in email:
+                return JsonResponse({"error": "ایمیل معتبر نیست"}, status=400)
+
+            # If email already registered, suggest login
+            if User.objects.filter(email__iexact=email).exists():
+                return JsonResponse(
+                    {"error": "این ایمیل قبلاً ثبت شده است. وارد شوید."},
+                    status=400,
+                )
+
+            result = send_code(email)
+            if result["success"]:
+                return JsonResponse(
+                    {"success": True, "message": "کد تایید به ایمیل شما ارسال شد"}
+                )
+            return JsonResponse({"error": result.get("error", "خطا")}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "داده نامعتبر"}, status=400)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class VerifyCodeView(View):
+    """Step 2: Verify the code entered by user."""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            email = data.get("email", "").strip().lower()
+            code = data.get("code", "").strip()
+
+            result = verify_code(email, code)
+            if result["success"]:
+                return JsonResponse(
+                    {"success": True, "message": "ایمیل تایید شد"}
+                )
+            return JsonResponse({"error": result.get("error", "خطا")}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "داده نامعتبر"}, status=400)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class CompleteRegistrationView(View):
+    """Step 3: Create account after email verification."""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            email = data.get("email", "").strip().lower()
+            username = data.get("username", "").strip()
+            password = data.get("password", "")
+            first_name = data.get("first_name", "").strip()
+            last_name = data.get("last_name", "").strip()
+            phone = data.get("phone", "").strip().replace(" ", "").replace("-", "")
+
+            # Must be verified first
+            if not is_verified(email):
+                return JsonResponse(
+                    {"error": "ابتدا ایمیل خود را تایید کنید"}, status=400
+                )
+
+            if not username or not password or not first_name or not last_name:
+                return JsonResponse(
+                    {"error": "نام، نام خانوادگی، نام کاربری و رمز عبور الزامی است"},
+                    status=400,
+                )
+
+            if len(username) < 3:
+                return JsonResponse(
+                    {"error": "نام کاربری باید حداقل ۳ کاراکتر باشد"}, status=400
+                )
+
+            if len(password) < 8:
+                return JsonResponse(
+                    {"error": "رمز عبور باید حداقل ۸ کاراکتر باشد"}, status=400
+                )
+
+            if User.objects.filter(username=username).exists():
+                return JsonResponse(
+                    {"error": "این نام کاربری قبلاً ثبت شده است"}, status=400
+                )
+
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+            )
+
+            # Phone is optional now (email is the identifier)
+            if phone:
+                if not IRAN_PHONE_RE.match(phone):
+                    user.delete()
+                    return JsonResponse(
+                        {"error": "شماره موبایل معتبر نیست (مثال: 09123456789)"},
+                        status=400,
+                    )
+                if Profile.objects.filter(phone=phone).exists():
+                    user.delete()
+                    return JsonResponse(
+                        {"error": "این شماره موبایل قبلاً ثبت شده است"}, status=400
+                    )
+                Profile.objects.create(user=user, phone=phone)
+
+            clear_verification(email)
+            login(request, user)
+            request.session.set_expiry(60 * 60 * 24 * 14)
+
+            # Welcome email
+            from config.emails import notify_welcome
+            notify_welcome(email, first_name)
+
+            return JsonResponse(
+                {"success": True, "user": user_json(user)}, status=201
+            )
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "داده نامعتبر"}, status=400)

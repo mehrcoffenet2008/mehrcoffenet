@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
@@ -23,36 +23,83 @@ function passwordStrength(pw) {
 
 export default function Register() {
   const [step, setStep] = useState(1);
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    email: "",
     first_name: "",
     last_name: "",
+    phone: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const timerRef = useRef(null);
 
   const strength = passwordStrength(formData.password);
+
+  // Countdown for resend
+  useEffect(() => {
+    if (countdown > 0) {
+      timerRef.current = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timerRef.current);
+  }, [countdown]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handlePhoneStep = (e) => {
+  // Step 1: Send code
+  const handleSendCode = async (e) => {
     e.preventDefault();
     setError("");
-    if (!/^09\d{9}$/.test(phone)) {
-      setError("شماره موبایل معتبر نیست (مثال: 09123456789)");
-      return;
+    setLoading(true);
+
+    const res = await fetch("/api/auth/send-code/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    setLoading(false);
+
+    if (res.ok) {
+      setCodeSent(true);
+      setCountdown(60);
+      setStep(2);
+    } else {
+      setError(data.error);
     }
-    setStep(2);
   };
 
+  // Step 2: Verify code
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const res = await fetch("/api/auth/verify-code/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
+    });
+    const data = await res.json();
+    setLoading(false);
+
+    if (res.ok) {
+      setStep(3);
+    } else {
+      setError(data.error);
+    }
+  };
+
+  // Step 3: Complete registration
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -63,7 +110,7 @@ export default function Register() {
     }
 
     setLoading(true);
-    const result = await register({ ...formData, phone });
+    const result = await register({ ...formData, email });
     setLoading(false);
 
     if (result.success) {
@@ -73,11 +120,17 @@ export default function Register() {
     }
   };
 
+  const stepTitles = {
+    1: "ایمیل",
+    2: "کد تایید",
+    3: "مشخصات شما",
+  };
+
   return (
     <main className="auth-page">
       <SEO
         title="ثبت‌نام | کافی‌نت مهر"
-        description="ثبت‌نام در کافی‌نت مهر با شماره موبایل"
+        description="ثبت‌نام در کافی‌نت مهر با ایمیل"
       />
       <div className="auth-container">
         <motion.div
@@ -88,24 +141,25 @@ export default function Register() {
         >
           <div className="auth-header">
             <h1>ثبت‌نام</h1>
-            <p>مرحله {step} از ۲ — {step === 1 ? "شماره موبایل" : "مشخصات شما"}</p>
+            <p>مرحله {step} از ۳ — {stepTitles[step]}</p>
           </div>
 
           {/* Progress bar */}
           <div className="auth-progress">
             <div
               className="auth-progress-fill"
-              style={{ width: step === 1 ? "50%" : "100%" }}
+              style={{ width: `${(step / 3) * 100}%` }}
             />
           </div>
 
           {error && <div className="auth-error">{error}</div>}
 
           <AnimatePresence mode="wait">
-            {step === 1 ? (
+            {/* Step 1: Email */}
+            {step === 1 && (
               <motion.form
                 key="step1"
-                onSubmit={handlePhoneStep}
+                onSubmit={handleSendCode}
                 className="auth-form"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -113,32 +167,94 @@ export default function Register() {
                 transition={{ duration: 0.25 }}
               >
                 <div className="form-group">
-                  <label>شماره موبایل *</label>
+                  <label>ایمیل *</label>
                   <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) =>
-                      setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))
-                    }
-                    placeholder="09123456789"
-                    inputMode="numeric"
-                    autoFocus
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="example@email.com"
+                    autoComplete="email"
                     required
                     className="ltr-input"
                   />
                   <small className="form-hint">
-                    شماره موبایل فقط برای شناسایی یکتای حساب استفاده می‌شود
-                    (اطلاع‌رسانی‌ها از طریق ایمیل ارسال می‌شود)
+                    کد تایید به این ایمیل ارسال می‌شود
                   </small>
                 </div>
 
-                <button type="submit" className="auth-submit">
-                  ادامه
+                <button type="submit" className="auth-submit" disabled={loading}>
+                  {loading ? "در حال ارسال..." : "ارسال کد تایید"}
                 </button>
               </motion.form>
-            ) : (
+            )}
+
+            {/* Step 2: Verification code */}
+            {step === 2 && (
               <motion.form
                 key="step2"
+                onSubmit={handleVerifyCode}
+                className="auth-form"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.25 }}
+              >
+                <div className="form-group">
+                  <label>کد تایید (۶ رقم) *</label>
+                  <input
+                    type="text"
+                    value={code}
+                    onChange={(e) =>
+                      setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    placeholder="کد ۶ رقمی"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    required
+                    className="ltr-input code-input"
+                  />
+                  <small className="form-hint">
+                    کد به ایمیل <strong>{email}</strong> ارسال شد
+                  </small>
+                </div>
+
+                <button type="submit" className="auth-submit" disabled={loading}>
+                  {loading ? "در حال بررسی..." : "تایید کد"}
+                </button>
+
+                <div className="resend-row">
+                  {countdown > 0 ? (
+                    <span className="resend-timer">
+                      ارسال مجدد تا {countdown} ثانیه دیگر
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="resend-btn"
+                      onClick={handleSendCode}
+                    >
+                      ارسال مجدد کد
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="resend-btn"
+                    onClick={() => {
+                      setStep(1);
+                      setError("");
+                      setCode("");
+                    }}
+                  >
+                    تغییر ایمیل
+                  </button>
+                </div>
+              </motion.form>
+            )}
+
+            {/* Step 3: Personal details */}
+            {step === 3 && (
+              <motion.form
+                key="step3"
                 onSubmit={handleSubmit}
                 className="auth-form"
                 initial={{ opacity: 0, x: 20 }}
@@ -226,13 +342,20 @@ export default function Register() {
                 </div>
 
                 <div className="form-group">
-                  <label>ایمیل (اختیاری)</label>
+                  <label>شماره موبایل (اختیاری)</label>
                   <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="example@email.com"
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        phone: e.target.value.replace(/\D/g, "").slice(0, 11),
+                      })
+                    }
+                    placeholder="09123456789"
+                    inputMode="numeric"
+                    className="ltr-input"
                   />
                 </div>
 
@@ -240,7 +363,10 @@ export default function Register() {
                   <button
                     type="button"
                     className="auth-back"
-                    onClick={() => setStep(1)}
+                    onClick={() => {
+                      setStep(2);
+                      setError("");
+                    }}
                   >
                     بازگشت
                   </button>
