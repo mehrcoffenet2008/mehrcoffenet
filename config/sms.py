@@ -1,24 +1,29 @@
 """
 SMS notifications via sms.ir API.
 
-Required env var:
-  SMS_IR_API_KEY  e.g. qQbekVmGc3kVAmmUQBeIfhyt851hqfAd7b2f7B3bDnThRJod
+Required env vars:
+  SMS_IR_USERNAME  e.g. your sms.ir username
+  SMS_IR_API_KEY   e.g. qQbekVmGc3kVAmmUQBeIfhyt851hqfAd7b2f7B3bDnThRJod
+  SMS_IR_LINE      e.g. 3000211111111
 """
 import logging
 import urllib.request
+import urllib.parse
 import json
 
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+SMS_IR_USERNAME = getattr(settings, "SMS_IR_USERNAME", "")
 SMS_IR_API_KEY = getattr(settings, "SMS_IR_API_KEY", "")
+SMS_IR_LINE = getattr(settings, "SMS_IR_LINE", "")
 
 
 def send_sms(phone: str, message: str) -> bool:
     """Send SMS via sms.ir API. Returns True on success."""
-    if not SMS_IR_API_KEY:
-        logger.warning("SMS_IR_API_KEY not configured")
+    if not SMS_IR_USERNAME or not SMS_IR_API_KEY or not SMS_IR_LINE:
+        logger.warning("SMS.ir not configured")
         return False
 
     if not phone or not message:
@@ -31,29 +36,29 @@ def send_sms(phone: str, message: str) -> bool:
     elif phone.startswith("+"):
         phone = phone[1:]
 
-    url = "https://api.sms.ir/v1/send/simple"
-
-    payload = {
+    params = {
+        "username": SMS_IR_USERNAME,
+        "password": SMS_IR_API_KEY,
+        "line": SMS_IR_LINE,
         "mobile": phone,
-        "message": message,
+        "text": message,
     }
 
-    data = json.dumps(payload).encode("utf-8")
+    query_string = urllib.parse.urlencode(params)
+    url = f"https://api.sms.ir/v1/send?{query_string}"
+
     req = urllib.request.Request(
         url,
-        data=data,
         headers={
-            "Authorization": f"Bearer {SMS_IR_API_KEY}",
-            "Content-Type": "application/json",
             "Accept": "application/json",
         },
-        method="POST",
+        method="GET",
     )
 
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             result = json.loads(resp.read().decode())
-            if result.get("status") == 1 or result.get("code") == 1:
+            if result.get("status") == 1:
                 return True
             logger.warning("SMS error: %s", result)
             return False
