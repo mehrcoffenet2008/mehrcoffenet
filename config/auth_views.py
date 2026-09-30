@@ -9,6 +9,8 @@ from django.utils.decorators import method_decorator
 import json
 import re
 
+from rest_framework.permissions import AllowAny
+
 from accounts.models import Profile
 from config.verification import send_code, verify_code, is_verified, clear_verification
 from django.conf import settings
@@ -302,6 +304,8 @@ class CSRFView(View):
 @method_decorator(csrf_exempt, name="dispatch")
 class SendCodeView(View):
     """Step 1: Send verification code to email."""
+    permission_classes = [AllowAny]
+
     def post(self, request):
         try:
             data = json.loads(request.body)
@@ -342,6 +346,8 @@ class SendCodeView(View):
 @method_decorator(csrf_exempt, name="dispatch")
 class VerifyCodeView(View):
     """Step 2: Verify the code entered by user."""
+    permission_classes = [AllowAny]
+
     def post(self, request):
         try:
             data = json.loads(request.body)
@@ -361,6 +367,8 @@ class VerifyCodeView(View):
 @method_decorator(csrf_exempt, name="dispatch")
 class CompleteRegistrationView(View):
     """Step 3: Create account after email verification."""
+    permission_classes = [AllowAny]
+
     def post(self, request):
         try:
             data = json.loads(request.body)

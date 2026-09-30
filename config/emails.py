@@ -13,30 +13,63 @@ Without SMTP config, emails print to console (local dev).
 import logging
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 
 logger = logging.getLogger(__name__)
 
 BRAND = "کافی‌نت مهر"
 
 
-def _send(to_email: str, subject: str, body: str) -> bool:
+def _send(to_email: str, subject: str, body: str, html_body: str = None) -> bool:
     """Send an email. Never raises — failure must not break the main flow."""
     if not to_email:
         return False
 
     try:
-        send_mail(
+        from_email = settings.DEFAULT_FROM_EMAIL
+        
+        msg = EmailMultiAlternatives(
             subject=f"[{BRAND}] {subject}",
             message=body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[to_email],
-            fail_silently=True,
+            from_email=from_email,
+            to=[to_email],
+            headers={
+                "Reply-To": from_email,
+                "X-Mailer": "mehrcoffenet/1.0",
+                "X-Priority": "3",
+                "Precedence": "bulk",
+            },
         )
+        
+        if html_body:
+            msg.attach_alternative(html_body, "text/html")
+        
+        msg.send(fail_silently=True)
         return True
     except Exception as exc:
         logger.warning("Email error: %s", exc)
         return False
+
+
+def _html_template(title: str, content: str) -> str:
+    """Simple HTML email template."""
+    return f"""
+    <div style="direction: rtl; font-family: Tahoma, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9;">
+        <div style="background: #0a0a0a; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: #c9a96e; margin: 0; font-size: 24px;">{BRAND}</h1>
+        </div>
+        <div style="background: #ffffff; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
+            <h2 style="color: #0a0a0a; margin-top: 0;">{title}</h2>
+            <div style="color: #333; line-height: 1.8; font-size: 14px;">
+                {content}
+            </div>
+        </div>
+        <div style="text-align: center; padding: 15px; color: #999; font-size: 12px;">
+            <p>این ایمیل به صورت خودکار ارسال شده است.</p>
+            <p>© 2026 {BRAND}</p>
+        </div>
+    </div>
+    """
 
 
 def notify_welcome(email: str, first_name: str) -> bool:
@@ -46,7 +79,15 @@ def notify_welcome(email: str, first_name: str) -> bool:
         f"با ورود به حساب خود می‌توانید سفارش ثبت کنید و سفارشات خود را پیگیری کنید.\n\n"
         f"با احترام،\n{BRAND}"
     )
-    return _send(email, "خوش آمدید", body)
+    html = _html_template(
+        "خوش آمدید",
+        f"""
+        <p>{first_name} عزیز،</p>
+        <p>خوش آمدید! حساب شما در <strong>{BRAND}</strong> با موفقیت ساخته شد.</p>
+        <p>با ورود به حساب خود می‌توانید سفارش ثبت کنید و سفارشات خود را پیگیری کنید.</p>
+        """
+    )
+    return _send(email, "خوش آمدید", body, html)
 
 
 def send_verification_code(email: str, code: str) -> bool:
@@ -57,7 +98,18 @@ def send_verification_code(email: str, code: str) -> bool:
         f"اگر شما این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید.\n\n"
         f"با احترام،\n{BRAND}"
     )
-    return _send(email, f"کد تایید {BRAND}", body)
+    html = _html_template(
+        "کد تایید",
+        f"""
+        <p>کد تایید شما در <strong>{BRAND}</strong>:</p>
+        <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0a0a0a;">{code}</span>
+        </div>
+        <p>این کد به مدت <strong>۱۰ دقیقه</strong> معتبر است.</p>
+        <p style="color: #666; font-size: 12px;">اگر شما این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید.</p>
+        """
+    )
+    return _send(email, f"کد تایید {BRAND}", body, html)
 
 
 def notify_order_created(email: str, tracking_code: str, service_name: str) -> bool:
@@ -68,7 +120,24 @@ def notify_order_created(email: str, tracking_code: str, service_name: str) -> b
         f"برای پیگیری وضعیت سفارش، به بخش «پیگیری درخواست» سایت مراجعه کنید.\n\n"
         f"با احترام،\n{BRAND}"
     )
-    return _send(email, f"ثبت سفارش — کد پیگیری {tracking_code}", body)
+    html = _html_template(
+        "ثبت سفارش",
+        f"""
+        <p>سفارش شما با موفقیت ثبت شد.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+                <td style="padding: 10px; border: 1px solid #e0e0e0; background: #f9f9f9;"><strong>خدمت</strong></td>
+                <td style="padding: 10px; border: 1px solid #e0e0e0;">{service_name}</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #e0e0e0; background: #f9f9f9;"><strong>کد پیگیری</strong></td>
+                <td style="padding: 10px; border: 1px solid #e0e0e0; font-family: monospace; font-size: 16px;">{tracking_code}</td>
+            </tr>
+        </table>
+        <p>برای پیگیری وضعیت سفارش، به بخش «پیگیری درخواست» سایت مراجعه کنید.</p>
+        """
+    )
+    return _send(email, f"ثبت سفارش — کد پیگیری {tracking_code}", body, html)
 
 
 def notify_order_status(email: str, tracking_code: str, status_label: str) -> bool:
@@ -78,4 +147,20 @@ def notify_order_status(email: str, tracking_code: str, status_label: str) -> bo
         f"وضعیت جدید: {status_label}\n\n"
         f"با احترام،\n{BRAND}"
     )
-    return _send(email, f"تغییر وضعیت سفارش {tracking_code}", body)
+    html = _html_template(
+        "تغییر وضعیت سفارش",
+        f"""
+        <p>وضعیت سفارش شما تغییر کرد.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+                <td style="padding: 10px; border: 1px solid #e0e0e0; background: #f9f9f9;"><strong>کد پیگیری</strong></td>
+                <td style="padding: 10px; border: 1px solid #e0e0e0; font-family: monospace;">{tracking_code}</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #e0e0e0; background: #f9f9f9;"><strong>وضعیت جدید</strong></td>
+                <td style="padding: 10px; border: 1px solid #e0e0e0;">{status_label}</td>
+            </tr>
+        </table>
+        """
+    )
+    return _send(email, f"تغییر وضعیت سفارش {tracking_code}", body, html)
