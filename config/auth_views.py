@@ -165,6 +165,11 @@ class RegisterView(View):
 
             login(request, user)
             request.session.set_expiry(60 * 60 * 24 * 14)
+
+            # Welcome SMS (never blocks registration)
+            from config.sms import notify_welcome
+            notify_welcome(phone, first_name)
+
             return JsonResponse(
                 {"success": True, "user": user_json(user)}, status=201
             )
