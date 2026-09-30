@@ -17,15 +17,20 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (username, password) => {
+  const login = async (username, password, remember = false) => {
     const res = await fetch("/api/auth/login/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, remember }),
     });
     const data = await res.json();
     if (res.ok) {
       setUser(data.user);
+      if (remember) {
+        localStorage.setItem("remembered_username", username);
+      } else {
+        localStorage.removeItem("remembered_username");
+      }
       return { success: true };
     }
     return { success: false, error: data.error };
@@ -50,8 +55,48 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateProfile = async (profileData) => {
+    const res = await fetch("/api/auth/profile/", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(profileData),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setUser((prev) => ({ ...prev, ...data.user }));
+      return { success: true };
+    }
+    return { success: false, error: data.error };
+  };
+
+  const changePassword = async (oldPassword, newPassword) => {
+    const res = await fetch("/api/auth/change-password/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        old_password: oldPassword,
+        new_password: newPassword,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      return { success: true };
+    }
+    return { success: false, error: data.error };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+        updateProfile,
+        changePassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
