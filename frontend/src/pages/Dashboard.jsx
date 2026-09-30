@@ -178,6 +178,12 @@ export default function Dashboard() {
               >
                 <div className="dashboard-details">
                   <div className="dashboard-item">
+                    <span className="dashboard-label">شماره موبایل</span>
+                    <span className="dashboard-value ltr-value">
+                      {user.phone || "—"}
+                    </span>
+                  </div>
+                  <div className="dashboard-item">
                     <span className="dashboard-label">نام کاربری</span>
                     <span className="dashboard-value">{user.username}</span>
                   </div>

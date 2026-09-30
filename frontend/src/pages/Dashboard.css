@@ -153,6 +153,10 @@
   color: var(--text-primary);
 }
 
+.ltr-value {
+  direction: ltr;
+}
+
 /* Forms */
 .dashboard-form {
   display: flex;

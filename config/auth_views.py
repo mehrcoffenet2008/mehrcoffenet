@@ -1,21 +1,44 @@
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.views import View
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from django.utils.decorators import method_decorator
 import json
+import re
+
+from accounts.models import Profile
+
+# Rate limiting: max 5 failed attempts per username/IP, then 15 min lock
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_SECONDS = 60 * 15
+
+IRAN_PHONE_RE = re.compile(r"^09\d{9}$")
 
 
 def user_json(user):
+    phone = ""
+    try:
+        phone = user.profile.phone
+    except Profile.DoesNotExist:
+        pass
     return {
         "id": user.id,
         "username": user.username,
         "email": user.email,
         "first_name": user.first_name,
         "last_name": user.last_name,
+        "phone": phone,
     }
+
+
+def _client_ip(request):
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "unknown")
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -32,15 +55,37 @@ class LoginView(View):
                     {"error": "نام کاربری و رمز عبور الزامی است"}, status=400
                 )
 
+            # Rate limiting check
+            ip = _client_ip(request)
+            lock_key = f"login_lock:{username}:{ip}"
+            fail_key = f"login_fail:{username}:{ip}"
+            if cache.get(lock_key):
+                return JsonResponse(
+                    {"error": "به دلیل تلاش‌های ناموفق، ورود موقتاً مسدود شد. ۱۵ دقیقه دیگر دوباره تلاش کنید."},
+                    status=429,
+                )
+
             user = authenticate(request, username=username, password=password)
             if user is None:
+                fails = cache.get(fail_key, 0) + 1
+                cache.set(fail_key, fails, LOCKOUT_SECONDS)
+                if fails >= MAX_LOGIN_ATTEMPTS:
+                    cache.set(lock_key, True, LOCKOUT_SECONDS)
+                    return JsonResponse(
+                        {"error": "به دلیل ۵ تلاش ناموفق، ورود به مدت ۱۵ دقیقه مسدود شد."},
+                        status=429,
+                    )
                 return JsonResponse(
-                    {"error": "نام کاربری یا رمز عبور اشتباه است"}, status=401
+                    {"error": f"نام کاربری یا رمز عبور اشتباه است ({MAX_LOGIN_ATTEMPTS - fails} تلاش باقی مانده)"},
+                    status=401,
                 )
+
+            # Success: clear failures
+            cache.delete(fail_key)
+            cache.delete(lock_key)
 
             login(request, user)
 
-            # Remember me: 2 weeks vs session-only (browser close)
             if remember:
                 request.session.set_expiry(60 * 60 * 24 * 14)
             else:
@@ -61,10 +106,25 @@ class RegisterView(View):
             email = data.get("email", "").strip()
             first_name = data.get("first_name", "").strip()
             last_name = data.get("last_name", "").strip()
+            phone = data.get("phone", "").strip().replace(" ", "").replace("-", "")
 
-            if not username or not password:
+            # Required fields
+            if not username or not password or not phone or not first_name or not last_name:
                 return JsonResponse(
-                    {"error": "نام کاربری و رمز عبور الزامی است"}, status=400
+                    {"error": "شماره موبایل، نام، نام خانوادگی، نام کاربری و رمز عبور الزامی است"},
+                    status=400,
+                )
+
+            # Phone validation (Iranian format)
+            if not IRAN_PHONE_RE.match(phone):
+                return JsonResponse(
+                    {"error": "شماره موبایل معتبر نیست (مثال: 09123456789)"},
+                    status=400,
+                )
+
+            if Profile.objects.filter(phone=phone).exists():
+                return JsonResponse(
+                    {"error": "این شماره موبایل قبلاً ثبت شده است"}, status=400
                 )
 
             if len(username) < 3:
@@ -72,10 +132,17 @@ class RegisterView(View):
                     {"error": "نام کاربری باید حداقل ۳ کاراکتر باشد"}, status=400
                 )
 
-            if len(password) < 6:
+            # Password strength validation (Django validators)
+            if len(password) < 8:
                 return JsonResponse(
-                    {"error": "رمز عبور باید حداقل ۶ کاراکتر باشد"}, status=400
+                    {"error": "رمز عبور باید حداقل ۸ کاراکتر باشد"}, status=400
                 )
+
+            temp_user = User(username=username, email=email, first_name=first_name, last_name=last_name)
+            try:
+                validate_password(password, temp_user)
+            except Exception as e:
+                return JsonResponse({"error": list(e.messages)[0]}, status=400)
 
             if User.objects.filter(username=username).exists():
                 return JsonResponse(
@@ -94,6 +161,8 @@ class RegisterView(View):
                 first_name=first_name,
                 last_name=last_name,
             )
+            Profile.objects.create(user=user, phone=phone)
+
             login(request, user)
             request.session.set_expiry(60 * 60 * 24 * 14)
             return JsonResponse(
@@ -176,9 +245,7 @@ class ChangePasswordView(View):
             try:
                 validate_password(new_password, request.user)
             except Exception as e:
-                return JsonResponse(
-                    {"error": list(e.messages)[0]}, status=400
-                )
+                return JsonResponse({"error": list(e.messages)[0]}, status=400)
 
             request.user.set_password(new_password)
             request.user.save()

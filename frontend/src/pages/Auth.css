@@ -193,6 +193,90 @@
   cursor: pointer;
 }
 
+/* Progress bar */
+.auth-progress {
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: 999px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.auth-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* Form hints */
+.form-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.ltr-input {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Password strength meter */
+.strength-meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.strength-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.strength-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.strength-label {
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 32px;
+}
+
+/* Step actions */
+.auth-step-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.auth-back {
+  padding: 14px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.auth-back:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.auth-step-actions .auth-submit {
+  flex: 1;
+  margin-top: 0;
+}
+
 @media (max-width: 480px) {
   .auth-card {
     padding: 32px 20px;
