@@ -30,7 +30,7 @@ def _send(to_email: str, subject: str, body: str, html_body: str = None) -> bool
         
         msg = EmailMultiAlternatives(
             subject=f"[{BRAND}] {subject}",
-            message=body,
+            body=body,
             from_email=from_email,
             to=[to_email],
             headers={
