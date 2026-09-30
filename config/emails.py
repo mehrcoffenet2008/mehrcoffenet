@@ -1,23 +1,65 @@
 """
 Email notifications for orders and account events.
 
-Configure SMTP via environment variables:
-  EMAIL_HOST       e.g. smtp.gmail.com
-  EMAIL_PORT       e.g. 587
-  EMAIL_HOST_USER  your email
-  EMAIL_HOST_PASSWORD  app password (Gmail: App Passwords)
-  DEFAULT_FROM_EMAIL
+Uses Mailgun API (no SMTP connection required).
+Fallback to console if no API key configured.
 
-Without SMTP config, emails print to console (local dev).
+Required env vars:
+  MAILGUN_API_KEY   e.g. key-xxxxx
+  MAILGUN_DOMAIN    e.g. mg.mehrcoffenet.com
 """
 import logging
+import urllib.request
+import urllib.parse
+import json
+import base64
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 
 logger = logging.getLogger(__name__)
 
 BRAND = "کافی‌نت مهر"
+
+
+def _send_via_mailgun(to_email: str, subject: str, body: str, html_body: str = None) -> bool:
+    """Send email via Mailgun API. Returns True on success."""
+    api_key = getattr(settings, "MAILGUN_API_KEY", "")
+    domain = getattr(settings, "MAILGUN_DOMAIN", "")
+    if not api_key or not domain:
+        return False
+
+    from_email = settings.DEFAULT_FROM_EMAIL
+
+    data = {
+        "from": f"{BRAND} <{from_email}>",
+        "to": to_email,
+        "subject": f"[{BRAND}] {subject}",
+        "text": body,
+    }
+
+    if html_body:
+        data["html"] = html_body
+
+    encoded_data = urllib.parse.urlencode(data).encode("utf-8")
+    
+    credentials = base64.b64encode(f"api:{api_key}".encode()).decode()
+    
+    req = urllib.request.Request(
+        f"https://api.mailgun.net/v3/{domain}/messages",
+        data=encoded_data,
+        headers={
+            "Authorization": f"Basic {credentials}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return 200 <= resp.status < 300
+    except Exception as exc:
+        logger.warning("Mailgun error: %s", exc)
+        return False
 
 
 def _send(to_email: str, subject: str, body: str, html_body: str = None) -> bool:
@@ -25,30 +67,14 @@ def _send(to_email: str, subject: str, body: str, html_body: str = None) -> bool
     if not to_email:
         return False
 
-    try:
-        from_email = settings.DEFAULT_FROM_EMAIL
-        
-        msg = EmailMultiAlternatives(
-            subject=f"[{BRAND}] {subject}",
-            body=body,
-            from_email=from_email,
-            to=[to_email],
-            headers={
-                "Reply-To": from_email,
-                "X-Mailer": "mehrcoffenet/1.0",
-                "X-Priority": "3",
-                "Precedence": "bulk",
-            },
-        )
-        
-        if html_body:
-            msg.attach_alternative(html_body, "text/html")
-        
-        msg.send(fail_silently=True)
+    # Try Mailgun first
+    if _send_via_mailgun(to_email, subject, body, html_body):
         return True
-    except Exception as exc:
-        logger.warning("Email error: %s", exc)
-        return False
+
+    # Fallback: log to console
+    logger.info("Email to %s: %s\n%s", to_email, subject, body)
+    print(f"\n{'='*40}\nEmail to: {to_email}\nSubject: {subject}\n{body}\n{'='*40}\n")
+    return False
 
 
 def _html_template(title: str, content: str) -> str:
