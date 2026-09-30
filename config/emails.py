@@ -1,16 +1,15 @@
 """
 Email notifications for orders and account events.
 
-Uses Mailgun API (no SMTP connection required).
+Uses Mailjet API (no SMTP connection required).
 Fallback to console if no API key configured.
 
 Required env vars:
-  MAILGUN_API_KEY   e.g. key-xxxxx
-  MAILGUN_DOMAIN    e.g. mg.mehrcoffenet.com
+  MAILJET_API_KEY     e.g. xxxxx
+  MAILJET_SECRET_KEY  e.g. xxxxx
 """
 import logging
 import urllib.request
-import urllib.parse
 import json
 import base64
 
@@ -21,35 +20,47 @@ logger = logging.getLogger(__name__)
 BRAND = "کافی‌نت مهر"
 
 
-def _send_via_mailgun(to_email: str, subject: str, body: str, html_body: str = None) -> bool:
-    """Send email via Mailgun API. Returns True on success."""
-    api_key = getattr(settings, "MAILGUN_API_KEY", "")
-    domain = getattr(settings, "MAILGUN_DOMAIN", "")
-    if not api_key or not domain:
+def _send_via_mailjet(to_email: str, subject: str, body: str, html_body: str = None) -> bool:
+    """Send email via Mailjet API. Returns True on success."""
+    api_key = getattr(settings, "MAILJET_API_KEY", "")
+    secret_key = getattr(settings, "MAILJET_SECRET_KEY", "")
+    if not api_key or not secret_key:
         return False
 
     from_email = settings.DEFAULT_FROM_EMAIL
 
-    data = {
-        "from": f"{BRAND} <{from_email}>",
-        "to": to_email,
-        "subject": f"[{BRAND}] {subject}",
-        "text": body,
+    payload = {
+        "Messages": [
+            {
+                "From": {
+                    "Email": from_email,
+                    "Name": BRAND,
+                },
+                "To": [
+                    {
+                        "Email": to_email,
+                    "Name": "",
+                    }
+                ],
+                "Subject": f"[{BRAND}] {subject}",
+                "TextPart": body,
+            }
+        ]
     }
 
     if html_body:
-        data["html"] = html_body
+        payload["Messages"][0]["HTMLPart"] = html_body
 
-    encoded_data = urllib.parse.urlencode(data).encode("utf-8")
+    data = json.dumps(payload).encode("utf-8")
     
-    credentials = base64.b64encode(f"api:{api_key}".encode()).decode()
+    credentials = base64.b64encode(f"{api_key}:{secret_key}".encode()).decode()
     
     req = urllib.request.Request(
-        f"https://api.mailgun.net/v3/{domain}/messages",
-        data=encoded_data,
+        "https://api.mailjet.com/v3.1/send",
+        data=data,
         headers={
             "Authorization": f"Basic {credentials}",
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type": "application/json",
         },
         method="POST",
     )
@@ -58,7 +69,7 @@ def _send_via_mailgun(to_email: str, subject: str, body: str, html_body: str = N
         with urllib.request.urlopen(req, timeout=30) as resp:
             return 200 <= resp.status < 300
     except Exception as exc:
-        logger.warning("Mailgun error: %s", exc)
+        logger.warning("Mailjet error: %s", exc)
         return False
 
 
@@ -67,8 +78,8 @@ def _send(to_email: str, subject: str, body: str, html_body: str = None) -> bool
     if not to_email:
         return False
 
-    # Try Mailgun first
-    if _send_via_mailgun(to_email, subject, body, html_body):
+    # Try Mailjet first
+    if _send_via_mailjet(to_email, subject, body, html_body):
         return True
 
     # Fallback: log to console
